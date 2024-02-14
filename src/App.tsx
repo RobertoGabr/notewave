@@ -2,6 +2,11 @@ import { NewNoteCard } from "./assets/components/new-notecard";
 import { NoteCard } from "./assets/components/note-card";
 import logo from "./assets/logo-expert.svg";
 
+const note = {
+  date: new Date(),
+  content: "Hello World",
+};
+
 export function App() {
   return (
     <div className="mx-auto max-w-6xl my-12 space-y-6">
@@ -17,9 +22,7 @@ export function App() {
 
       <div className="grid gap-6 grid-cols-3 auto-rows-[250px]">
         <NewNoteCard />
-        <NoteCard />
-        <NoteCard />
-        <NoteCard />
+        <NoteCard note={note} />
       </div>
     </div>
   );
