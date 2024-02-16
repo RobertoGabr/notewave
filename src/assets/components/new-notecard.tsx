@@ -7,9 +7,12 @@ interface NewNoteCardProps {
   onNoteCreate: (content: string) => void;
 }
 
+let speechRecognition: SpeechRecognition | null = null;
+
 export function NewNoteCard({ onNoteCreate }: NewNoteCardProps) {
   const [shouldShowOnBoarding, setShouldShowOnBoarding] = useState(true);
   const [content, setContent] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
 
   function handleStartEditor() {
     setShouldShowOnBoarding(false);
@@ -25,12 +28,59 @@ export function NewNoteCard({ onNoteCreate }: NewNoteCardProps) {
   function handleSaveNote(e: FormEvent) {
     e.preventDefault();
 
+    if (content == "") {
+      return;
+    }
+
     onNoteCreate(content);
 
     setContent("");
     setShouldShowOnBoarding(true);
 
     toast.success("Nota criada com sucesso");
+  }
+
+  function handleStartRecording() {
+    const isSpeechRecognitionAPIAvailable =
+      "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
+
+    if (!isSpeechRecognitionAPIAvailable) {
+      alert("Infelizmente seu navegador não suporte a API de gravação!");
+      return;
+    }
+
+    setIsRecording(true);
+    setShouldShowOnBoarding(false);
+    const SpeechRecognitionAPI =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    speechRecognition = new SpeechRecognitionAPI();
+
+    speechRecognition.lang = "pt-BR";
+    speechRecognition.continuous = true;
+    speechRecognition.maxAlternatives = 1;
+    speechRecognition.interimResults = true;
+
+    speechRecognition.onresult = (event) => {
+      const transcription = Array.from(event.results).reduce((text, result) => {
+        return text.concat(result[0].transcript);
+      }, "");
+
+      setContent(transcription);
+    };
+
+    speechRecognition.onerror = (event) => {
+      console.error(event);
+    };
+
+    speechRecognition.start();
+  }
+
+  function handleStopRecording() {
+    setIsRecording(false);
+    if (speechRecognition !== null) {
+      speechRecognition.stop();
+    }
   }
 
   return (
@@ -60,11 +110,16 @@ export function NewNoteCard({ onNoteCreate }: NewNoteCardProps) {
               {shouldShowOnBoarding ? (
                 <p className="text-small font-normal text-slate-400 leading-6">
                   Comece{" "}
-                  <button className="font-medium text-lime-400 hover:underline">
+                  <button
+                    type="button"
+                    onClick={handleStartRecording}
+                    className="font-medium text-lime-400 hover:underline"
+                  >
                     gravando uma nota
                   </button>{" "}
                   em áudio ou se preferir{" "}
                   <button
+                    type="button"
                     className="font-medium text-lime-400 hover:underline"
                     onClick={handleStartEditor}
                   >
@@ -81,12 +136,25 @@ export function NewNoteCard({ onNoteCreate }: NewNoteCardProps) {
                 ></textarea>
               )}
             </div>
-            <button
-              type="submit"
-              className="w-full bg-lime-400 py-4 text-center text-sm text-lime-950 outline-none font-bold "
-            >
-              Salvar nota
-            </button>
+
+            {isRecording ? (
+              <button
+                onClick={handleStopRecording}
+                type="button"
+                className="w-full flex items-center justify-center gap-2 animate-pulse bg-slate-900 py-4 text-center text-sm text-slate-300 outline-none font-bold "
+              >
+                <div className="size-3 rounded-full bg-red-500" />
+                Gravando! (clique para interromper)
+              </button>
+            ) : (
+              <button
+                onClick={handleSaveNote}
+                type="button"
+                className="w-full bg-lime-400 py-4 text-center text-sm text-lime-950 outline-none font-bold "
+              >
+                Salvar nota
+              </button>
+            )}
           </form>
         </Dialog.Content>
       </Dialog.Portal>
